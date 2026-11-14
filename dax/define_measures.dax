@@ -1,0 +1,88 @@
+// Paste this whole script into DAX query view, click Run to check the numbers,
+// then click "Update model with changes" to add all 22 measures to the model.
+
+DEFINE
+    // ---------------------------------------------------------------- Sales
+    // Revenue and Freight live on fact_order_items: fact_orders already has
+    // columns with those names, and a measure cannot share a name with a column
+    // of its own table.
+    MEASURE fact_order_items[Revenue] =
+        CALCULATE ( SUM ( fact_order_items[price] ), fact_order_items[order_status] = "delivered" )
+    MEASURE fact_order_items[Freight] =
+        CALCULATE ( SUM ( fact_order_items[freight_value] ), fact_order_items[order_status] = "delivered" )
+    MEASURE fact_orders[Freight % of Revenue] =
+        DIVIDE ( [Freight], [Revenue] )
+    MEASURE fact_orders[Orders] =
+        CALCULATE ( COUNTROWS ( fact_orders ), fact_orders[order_status] = "delivered" )
+    MEASURE fact_orders[Customers] =
+        CALCULATE ( DISTINCTCOUNT ( fact_orders[customer_unique_id] ), fact_orders[order_status] = "delivered" )
+    MEASURE fact_orders[Avg Order Value] =
+        DIVIDE (
+            CALCULATE ( SUM ( fact_orders[revenue] ), fact_orders[order_status] = "delivered" ),
+            [Orders]
+        )
+
+    // ------------------------------------------------------ Time intelligence
+    MEASURE fact_orders[Revenue Prev Month] =
+        CALCULATE ( [Revenue], DATEADD ( dim_date[date], -1, MONTH ) )
+    MEASURE fact_orders[Revenue MoM %] =
+        DIVIDE ( [Revenue] - [Revenue Prev Month], [Revenue Prev Month] )
+    MEASURE fact_orders[Revenue YTD] =
+        TOTALYTD ( [Revenue], dim_date[date] )
+    MEASURE fact_orders[Revenue Last Year] =
+        CALCULATE ( [Revenue], SAMEPERIODLASTYEAR ( dim_date[date] ) )
+    MEASURE fact_orders[Revenue YoY %] =
+        DIVIDE ( [Revenue] - [Revenue Last Year], [Revenue Last Year] )
+
+    // ------------------------------------------------------------- Customers
+    MEASURE fact_orders[New Customers] =
+        CALCULATE ( DISTINCTCOUNT ( fact_orders[customer_unique_id] ), fact_orders[customer_order_number] = 1 )
+    MEASURE fact_orders[Repeat Customers] =
+        CALCULATE ( DISTINCTCOUNT ( fact_orders[customer_unique_id] ), fact_orders[customer_order_number] >= 2 )
+    MEASURE fact_orders[Repeat Customer %] =
+        DIVIDE ( [Repeat Customers], [Customers] )
+    MEASURE fact_orders[Revenue per Customer] =
+        DIVIDE ( [Revenue], [Customers] )
+
+    // -------------------------------------------------------------- Delivery
+    MEASURE fact_orders[Late Orders] =
+        CALCULATE ( [Orders], fact_orders[is_late] = 1 )
+    MEASURE fact_orders[Late Delivery %] =
+        DIVIDE ( [Late Orders], CALCULATE ( [Orders], NOT ISBLANK ( fact_orders[is_late] ) ) )
+    MEASURE fact_orders[Avg Delivery Days] =
+        CALCULATE ( AVERAGE ( fact_orders[delivery_days] ), fact_orders[order_status] = "delivered" )
+
+    // ---------------------------------------------------------- Satisfaction
+    MEASURE fact_orders[Avg Review Score] =
+        CALCULATE ( AVERAGE ( fact_orders[review_score] ), fact_orders[order_status] = "delivered" )
+    MEASURE fact_orders[Bad Review %] =
+        DIVIDE (
+            CALCULATE ( [Orders], fact_orders[review_score] IN { 1, 2 } ),
+            CALCULATE ( [Orders], NOT ISBLANK ( fact_orders[review_score] ) )
+        )
+
+    // --------------------------------------------------------------- Sellers
+    MEASURE fact_orders[Active Sellers] =
+        CALCULATE ( DISTINCTCOUNT ( fact_order_items[seller_id] ), fact_order_items[order_status] = "delivered" )
+    MEASURE fact_orders[Revenue per Seller] =
+        DIVIDE ( [Revenue], [Active Sellers] )
+
+// Control values. Expected:
+// Revenue 13221498.11 | Orders 96478 | Customers 93358 | Avg Order Value 137.04
+// Freight % 0.1663 | Late % 0.0811 | Avg Delivery Days 12.5 | Avg Review 4.156
+// Bad Review % 0.1281 | Repeat Customers 2801 | Repeat % 0.0300 | Active Sellers 2970
+EVALUATE
+    ROW (
+        "Revenue", [Revenue],
+        "Orders", [Orders],
+        "Customers", [Customers],
+        "Avg Order Value", [Avg Order Value],
+        "Freight % of Revenue", [Freight % of Revenue],
+        "Late Delivery %", [Late Delivery %],
+        "Avg Delivery Days", [Avg Delivery Days],
+        "Avg Review Score", [Avg Review Score],
+        "Bad Review %", [Bad Review %],
+        "Repeat Customers", [Repeat Customers],
+        "Repeat Customer %", [Repeat Customer %],
+        "Active Sellers", [Active Sellers]
+    )

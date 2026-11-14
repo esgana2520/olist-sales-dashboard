@@ -10,11 +10,19 @@ It answers three questions for a commercial and operations team:
 
 ## Dashboard
 
-> Screenshots are added once the report is built in Power BI Desktop.
+The report file is [olist-sales-dashboard.pbix](olist-sales-dashboard.pbix); a static export is in [dashboard.pdf](dashboard.pdf). Every page has year and region slicers, synced across pages.
 
-| Executive Overview | Customers & Retention | Delivery & Satisfaction |
-|---|---|---|
-| ![Overview](images/page1-overview.png) | ![Customers](images/page2-customers.png) | ![Delivery](images/page3-delivery.png) |
+### Executive Overview
+
+![Executive Overview](images/page1-overview.png)
+
+### Customers & Retention
+
+![Customers & Retention](images/page2-customers.png)
+
+### Delivery & Satisfaction
+
+![Delivery & Satisfaction](images/page3-delivery.png)
 
 ## Data model
 
@@ -78,11 +86,14 @@ This writes the six model tables to `data/model/` as CSV, ready to load into Pow
 ## Project structure
 
 ```
-├── sql/star_schema.sql      star schema definition
-├── scripts/build_model.py   builds data/model/ from the raw CSV files
-├── dax/measures.dax         all DAX measures
-├── theme/olist-theme.json   Power BI report theme
-└── images/                  dashboard screenshots
+├── olist-sales-dashboard.pbix   the Power BI report
+├── dashboard.pdf                static export of the three pages
+├── sql/star_schema.sql          star schema definition
+├── scripts/build_model.py       builds data/model/ from the raw CSV files
+├── dax/measures.dax             all DAX measures, documented
+├── dax/define_measures.dax      the same measures as a DAX query that also checks the totals
+├── theme/olist-theme.json       Power BI report theme
+└── images/                      dashboard screenshots
 ```
 
 ## Tech stack
