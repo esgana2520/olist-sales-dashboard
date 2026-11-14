@@ -1,0 +1,15 @@
+# Data is rebuilt from the Kaggle download, not committed
+data/raw/*.csv
+data/model/*.csv
+
+# Personal build notes
+docs/guia-montagem.md
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,123 @@
+// DAX measures for the Olist sales dashboard.
+// All business measures count DELIVERED orders only.
+// Create each one in a dedicated "_Measures" table (Home > Enter data > empty table).
+
+// ---------------------------------------------------------------- Sales
+
+Revenue =
+CALCULATE (
+    SUM ( fact_order_items[price] ),
+    fact_order_items[order_status] = "delivered"
+)
+
+Freight =
+CALCULATE (
+    SUM ( fact_order_items[freight_value] ),
+    fact_order_items[order_status] = "delivered"
+)
+
+Freight % of Revenue =
+DIVIDE ( [Freight], [Revenue] )
+
+Orders =
+CALCULATE (
+    COUNTROWS ( fact_orders ),
+    fact_orders[order_status] = "delivered"
+)
+
+Customers =
+CALCULATE (
+    DISTINCTCOUNT ( fact_orders[customer_unique_id] ),
+    fact_orders[order_status] = "delivered"
+)
+
+Avg Order Value =
+DIVIDE (
+    CALCULATE (
+        SUM ( fact_orders[revenue] ),
+        fact_orders[order_status] = "delivered"
+    ),
+    [Orders]
+)
+
+// ------------------------------------------------------ Time intelligence
+// Requires dim_date marked as the date table (Table tools > Mark as date table).
+
+Revenue Prev Month =
+CALCULATE ( [Revenue], DATEADD ( dim_date[date], -1, MONTH ) )
+
+Revenue MoM % =
+DIVIDE ( [Revenue] - [Revenue Prev Month], [Revenue Prev Month] )
+
+Revenue YTD =
+TOTALYTD ( [Revenue], dim_date[date] )
+
+Revenue Last Year =
+CALCULATE ( [Revenue], SAMEPERIODLASTYEAR ( dim_date[date] ) )
+
+Revenue YoY % =
+DIVIDE ( [Revenue] - [Revenue Last Year], [Revenue Last Year] )
+
+// ------------------------------------------------------------- Customers
+
+New Customers =
+CALCULATE (
+    DISTINCTCOUNT ( fact_orders[customer_unique_id] ),
+    fact_orders[customer_order_number] = 1
+)
+
+Repeat Customers =
+CALCULATE (
+    DISTINCTCOUNT ( fact_orders[customer_unique_id] ),
+    fact_orders[customer_order_number] >= 2
+)
+
+Repeat Customer % =
+DIVIDE ( [Repeat Customers], [Customers] )
+
+Revenue per Customer =
+DIVIDE ( [Revenue], [Customers] )
+
+// -------------------------------------------------------------- Delivery
+
+Late Orders =
+CALCULATE ( [Orders], fact_orders[is_late] = 1 )
+
+Late Delivery % =
+DIVIDE (
+    [Late Orders],
+    CALCULATE ( [Orders], NOT ISBLANK ( fact_orders[is_late] ) )
+)
+
+Avg Delivery Days =
+CALCULATE (
+    AVERAGE ( fact_orders[delivery_days] ),
+    fact_orders[order_status] = "delivered"
+)
+
+// ---------------------------------------------------------- Satisfaction
+
+Avg Review Score =
+CALCULATE (
+    AVERAGE ( fact_orders[review_score] ),
+    fact_orders[order_status] = "delivered"
+)
+
+// IN { 1, 2 } instead of "<= 2": in DAX a blank score compares as 0,
+// so "<= 2" would wrongly count orders with no review.
+Bad Review % =
+DIVIDE (
+    CALCULATE ( [Orders], fact_orders[review_score] IN { 1, 2 } ),
+    CALCULATE ( [Orders], NOT ISBLANK ( fact_orders[review_score] ) )
+)
+
+// --------------------------------------------------------------- Sellers
+
+Active Sellers =
+CALCULATE (
+    DISTINCTCOUNT ( fact_order_items[seller_id] ),
+    fact_order_items[order_status] = "delivered"
+)
+
+Revenue per Seller =
+DIVIDE ( [Revenue], [Active Sellers] )
